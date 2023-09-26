@@ -60,12 +60,14 @@ def system_devices() -> List[str]:
     return sorted(list(set(system_devs)))  # Remove duplicates
 
 
-def get_devices(exclude_system_device: bool = True) -> list[str]:
+def get_devices(exclude_system_devices: bool = True) -> List[str]:
+    """Return a list of all connected devices. If exclude_system_devices is True,
+    exclude devices that are used by the system."""
     all_devices = glob.glob("/dev/sd[a-z]")
 
-    if exclude_system_device:
-        root_device = system_devices()
-        all_devices = [device for device in all_devices if device != root_device]
+    if exclude_system_devices:
+        system_devs = system_devices()
+        all_devices = [device for device in all_devices if device not in system_devs]
 
     return all_devices
 
