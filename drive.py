@@ -1,5 +1,6 @@
 import glob
 import subprocess
+from dataclasses import dataclass
 from typing import Sequence, Optional
 
 from typing import List
@@ -79,3 +80,46 @@ def is_wsl() -> bool:
     except FileNotFoundError:
         return False
 
+
+@dataclass
+class DriveInfo:
+    device: str
+    model: str
+    model_family: str
+    capacity: str
+    serial_number: str
+    power_on_hours: str
+
+
+def info(device: str) -> DriveInfo:
+    # Fetch drive details using smartctl
+    result = subprocess.run(['smartctl', '-i', device], capture_output=True, text=True)
+    output = result.stdout
+
+    # Extract drive information
+    model = _extract_info(output, "Device Model:")
+    model_family = _extract_info(output, ["Vendor:", "Model Family:"])
+    capacity = _extract_info(output, "User Capacity:").split('[')[-1].strip(']')
+    serial_number = _extract_info(output, "Serial Number:")
+
+    # Fetch Power_On_Hours separately
+    result_power_on = subprocess.run(['smartctl', '-a', device], capture_output=True, text=True)
+    power_on_hours = _extract_info(result_power_on.stdout, "Power_On_Hours")
+
+    return DriveInfo(device=device, model=model, model_family=model_family, capacity=capacity,
+                     serial_number=serial_number, power_on_hours=power_on_hours)
+
+
+def _extract_info(output: str, keywords: list[str]) -> str:
+    for line in output.splitlines():
+        for keyword in keywords:
+            if keyword in line:
+                return line.split(':', 1)[-1].strip()
+    return ''
+
+
+if __name__ == '__main__':
+    all_devs = get_devices(exclude_system_devices=False)
+    print(all_devs)
+    non_system_devs = get_devices(exclude_system_devices=True)
+    print(non_system_devs)
